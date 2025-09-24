@@ -292,7 +292,7 @@ const Dashboard = () => {
               <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <MessageSquare className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">WhatsApp CRM</h1>
+              <h1 className="text-xl font-bold text-gray-900">Luciana AI</h1>
             </div>
             
             <div className="flex items-center space-x-4">
