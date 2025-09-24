@@ -244,8 +244,12 @@ def require_role(required_roles: List[UserRole]):
 
 # Database helpers
 def prepare_for_mongo(data):
-    """Convert datetime objects to ISO strings for MongoDB storage"""
+    """Convert Pydantic model to MongoDB document format"""
     if isinstance(data, dict):
+        # Convert id to _id for MongoDB
+        if 'id' in data:
+            data['_id'] = data.pop('id')
+        
         for key, value in data.items():
             if isinstance(value, datetime):
                 data[key] = value.isoformat()
