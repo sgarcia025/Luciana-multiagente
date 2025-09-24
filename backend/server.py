@@ -586,6 +586,187 @@ async def get_users(
     users = await db.users.find(query).to_list(1000)
     return [UserResponse(**parse_from_mongo(user)) for user in users]
 
+# WhatsApp Configuration Models
+class WhatsAppConfigUpdate(BaseModel):
+    api_base: str = "https://api.ultramsg.com/instance123456"  # Example URL
+    api_key: str
+    phone_number: str
+
+class SendMessageRequest(BaseModel):
+    to_phone: str
+    message: str
+    type: str = "text"
+
+class WebhookData(BaseModel):
+    id: str
+    type: str
+    from_: str = Field(alias="from")
+    body: Optional[str] = None
+    timestamp: int
+    instance: Optional[str] = None
+    media_url: Optional[str] = None
+
+# WhatsApp Configuration Routes
+@api_router.patch("/whatsapp/config")
+async def update_whatsapp_config(
+    config: WhatsAppConfigUpdate,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update WhatsApp configuration for the tenant"""
+    
+    # Update tenant's WhatsApp config
+    await db.tenants.update_one(
+        {"_id": current_user.tenant_id},
+        {
+            "$set": {
+                "wa_config": {
+                    "provider": "ultramsg",
+                    "api_base": config.api_base,
+                    "api_key": config.api_key,
+                    "phone_number": config.phone_number
+                }
+            }
+        }
+    )
+    
+    return {"message": "WhatsApp configuration updated successfully"}
+
+@api_router.get("/whatsapp/status")
+async def get_whatsapp_status(
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get WhatsApp instance status"""
+    
+    status_result = await whatsapp_service.get_instance_status(current_user.tenant_id)
+    return status_result
+
+@api_router.post("/whatsapp/send-message")
+async def send_whatsapp_message(
+    message_request: SendMessageRequest,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.AGENT]))
+):
+    """Send WhatsApp message"""
+    
+    if message_request.type == "text":
+        result = await whatsapp_service.send_text_message(
+            current_user.tenant_id,
+            message_request.to_phone,
+            message_request.message
+        )
+    else:
+        return {"success": False, "error": "Message type not supported yet"}
+    
+    return result
+
+# WhatsApp Webhook Route (no auth required)
+@api_router.post("/webhooks/whatsapp")
+async def whatsapp_webhook(request: Request):
+    """Receive WhatsApp webhooks from UltraMSG"""
+    
+    try:
+        body = await request.body()
+        webhook_data = await request.json()
+        
+        # Process the incoming message
+        result = await whatsapp_service.process_incoming_message(webhook_data)
+        
+        return {"status": "received", "processed": result.get("success", False)}
+        
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+        return {"status": "error", "message": str(e)}
+
+# Conversation and Message Models
+class MessageBase(BaseModel):
+    text: Optional[str] = None
+    type: str = "text"
+    media_url: Optional[str] = None
+
+class MessageCreate(MessageBase):
+    conversation_id: str
+
+class Message(MessageBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    lead_id: str
+    conversation_id: Optional[str] = None
+    direction: str = "out"  # "in" or "out"
+    whatsapp_message_id: Optional[str] = None
+    sent_by_agent_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MessageResponse(BaseModel):
+    id: str
+    text: Optional[str]
+    type: str
+    direction: str
+    whatsapp_message_id: Optional[str]
+    sent_by_agent_id: Optional[str]
+    created_at: datetime
+
+# Conversation Routes
+@api_router.get("/conversations/{lead_id}/messages", response_model=List[MessageResponse])
+async def get_conversation_messages(
+    lead_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get messages for a conversation"""
+    
+    # Verify user can access this lead
+    lead = await db.leads.find_one({"_id": lead_id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Check permissions
+    if current_user.role == UserRole.AGENT and lead.get("assigned_agent_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this conversation")
+    
+    if current_user.role != UserRole.SUPERUSER and lead.get("tenant_id") != current_user.tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this conversation")
+    
+    # Get messages
+    messages = await db.messages.find({"lead_id": lead_id}).sort("created_at", 1).to_list(1000)
+    return [MessageResponse(**parse_from_mongo(message)) for message in messages]
+
+@api_router.post("/conversations/{lead_id}/messages")
+async def send_conversation_message(
+    lead_id: str,
+    message: MessageBase,
+    current_user: User = Depends(require_role([UserRole.AGENT]))
+):
+    """Send message in a conversation"""
+    
+    # Verify user can send to this lead
+    lead = await db.leads.find_one({"_id": lead_id, "assigned_agent_id": current_user.id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found or not assigned to you")
+    
+    # Send via WhatsApp
+    result = await whatsapp_service.send_text_message(
+        current_user.tenant_id,
+        lead["customer"]["phone"],
+        message.text
+    )
+    
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to send message"))
+    
+    # Save message to database
+    message_data = Message(
+        tenant_id=current_user.tenant_id,
+        lead_id=lead_id,
+        text=message.text,
+        type=message.type,
+        direction="out",
+        whatsapp_message_id=result.get("message_id"),
+        sent_by_agent_id=current_user.id
+    )
+    
+    message_dict = prepare_for_mongo(message_data.dict())
+    await db.messages.insert_one(message_dict)
+    
+    return MessageResponse(**message_data.dict())
+
 # Include router in app
 app.include_router(api_router)
 
