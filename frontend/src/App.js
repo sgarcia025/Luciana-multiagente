@@ -768,7 +768,7 @@ const ChatInterface = ({ lead, user, onMessageSent }) => {
 };
 
 // User Management Component  
-const UserManagement = ({ user, users, onUserCreated }) => {
+const UserManagement = ({ user, users, leads, onUserCreated }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
