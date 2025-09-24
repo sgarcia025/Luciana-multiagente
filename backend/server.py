@@ -36,7 +36,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Security
 security = HTTPBearer()
 
-app = FastAPI(title="WhatsApp Multi-Agent Router CRM", version="1.0.0")
+app = FastAPI(title="Luciana AI - Multi-Agent Router Platform", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
 # Initialize WhatsApp service
