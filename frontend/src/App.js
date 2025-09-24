@@ -557,38 +557,7 @@ const Dashboard = () => {
                 <CardTitle>Configuración de WhatsApp</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <Alert>
-                    <Settings className="h-4 w-4" />
-                    <AlertDescription>
-                      Configuración de integración con UltraMSG próximamente disponible.
-                      Aquí podrás configurar las credenciales de WhatsApp Business API.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Proveedor</label>
-                      <Input placeholder="UltraMSG" disabled />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">API Base URL</label>
-                      <Input placeholder="https://api.ultramsg.com" disabled />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">API Key</label>
-                      <Input type="password" placeholder="Tu API Key" disabled />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Número de Teléfono</label>
-                      <Input placeholder="+1234567890" disabled />
-                    </div>
-                  </div>
-                  
-                  <Button disabled className="w-full">
-                    Guardar Configuración (Próximamente)
-                  </Button>
-                </div>
+                <WhatsAppSettings user={user} />
               </CardContent>
             </Card>
           </TabsContent>
