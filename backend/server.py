@@ -234,6 +234,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user = await db.users.find_one({"email": token_data.username})
     if user is None:
         raise credentials_exception
+    user = parse_from_mongo(user)
     return User(**user)
 
 def require_role(required_roles: List[UserRole]):
