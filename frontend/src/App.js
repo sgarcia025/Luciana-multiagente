@@ -941,7 +941,7 @@ const UserManagement = ({ user, users, leads, onUserCreated }) => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Badge className={getRoleColor(u.role)}>
-                        {u.role}
+                        {u.role === 'SUPERUSER' ? 'SUPER' : u.role}
                       </Badge>
                       <Badge variant={u.is_active ? "default" : "secondary"}>
                         {u.is_active ? "Activo" : "Inactivo"}
