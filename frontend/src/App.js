@@ -780,7 +780,14 @@ const UserManagement = ({ user, users, leads, onUserCreated }) => {
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleCreateUser = async (e) => {
+  const getRoleColor = (role) => {
+    const colors = {
+      SUPERUSER: 'bg-purple-100 text-purple-800',
+      ADMIN: 'bg-blue-100 text-blue-800',
+      AGENT: 'bg-green-100 text-green-800'
+    };
+    return colors[role] || 'bg-gray-100 text-gray-800';
+  };
     e.preventDefault();
     setCreating(true);
     setMessage('');
