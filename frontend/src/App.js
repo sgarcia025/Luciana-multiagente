@@ -205,6 +205,7 @@ const Dashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLead, setSelectedLead] = useState(null);
 
   useEffect(() => {
     fetchData();
