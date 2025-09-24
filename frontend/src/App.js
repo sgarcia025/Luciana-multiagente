@@ -667,6 +667,314 @@ const Dashboard = () => {
   );
 };
 
+// Create Lead Form Component
+const CreateLeadForm = ({ users, onLeadCreated }) => {
+  const [formData, setFormData] = useState({
+    external_lead_id: '',
+    source: 'Manual Creation',
+    customer: {
+      name: '',
+      phone: '',
+      email: ''
+    },
+    journey_stage: 'new',
+    priority: 'medium',
+    assigned_agent_id: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [expanded, setExpanded] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const submitData = {
+        external_lead_id: formData.external_lead_id || `MANUAL_${Date.now()}`,
+        source: formData.source,
+        customer: formData.customer,
+        journey_stage: formData.journey_stage,
+        priority: formData.priority,
+        metadata: { created_manually: true }
+      };
+
+      const url = formData.assigned_agent_id 
+        ? `${API}/leads/manual?assigned_agent_id=${formData.assigned_agent_id}`
+        : `${API}/leads/manual`;
+
+      const response = await axios.post(url, submitData);
+      
+      setMessage('Lead creado exitosamente');
+      setFormData({
+        external_lead_id: '',
+        source: 'Manual Creation',
+        customer: { name: '', phone: '', email: '' },
+        journey_stage: 'new',
+        priority: 'medium',
+        assigned_agent_id: ''
+      });
+      setExpanded(false);
+      onLeadCreated();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'Error al crear lead');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const agents = users.filter(u => u.role === 'AGENT' && u.is_active);
+
+  if (!expanded) {
+    return (
+      <Button 
+        onClick={() => setExpanded(true)}
+        className="w-full bg-blue-600 hover:bg-blue-700"
+      >
+        <Users className="h-4 w-4 mr-2" />
+        Crear Nuevo Lead
+      </Button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-gray-700">Nombre del Cliente *</label>
+          <Input
+            value={formData.customer.name}
+            onChange={(e) => setFormData({
+              ...formData,
+              customer: { ...formData.customer, name: e.target.value }
+            })}
+            placeholder="Ej: Juan Pérez"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Teléfono *</label>
+          <Input
+            value={formData.customer.phone}
+            onChange={(e) => setFormData({
+              ...formData,
+              customer: { ...formData.customer, phone: e.target.value }
+            })}
+            placeholder="+34612345678"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-gray-700">Email</label>
+          <Input
+            type="email"
+            value={formData.customer.email}
+            onChange={(e) => setFormData({
+              ...formData,
+              customer: { ...formData.customer, email: e.target.value }
+            })}
+            placeholder="juan@empresa.com"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Fuente</label>
+          <Input
+            value={formData.source}
+            onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+            placeholder="Ej: LinkedIn, Web, Referido"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="text-sm font-medium text-gray-700">Etapa</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.journey_stage}
+            onChange={(e) => setFormData({ ...formData, journey_stage: e.target.value })}
+          >
+            <option value="new">Nuevo</option>
+            <option value="contacted">Contactado</option>
+            <option value="qualified">Calificado</option>
+            <option value="proposal">Propuesta</option>
+            <option value="negotiation">Negociación</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Prioridad</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.priority}
+            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+          >
+            <option value="low">Baja</option>
+            <option value="medium">Media</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Asignar a Agente</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.assigned_agent_id}
+            onChange={(e) => setFormData({ ...formData, assigned_agent_id: e.target.value })}
+          >
+            <option value="">Auto-asignar</option>
+            {agents.map(agent => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {message && (
+        <Alert className={message.includes('Error') ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+          <AlertDescription className={message.includes('Error') ? 'text-red-700' : 'text-green-700'}>
+            {message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex space-x-3">
+        <Button 
+          type="submit" 
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {loading ? 'Creando...' : 'Crear Lead'}
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline"
+          onClick={() => {
+            setExpanded(false);
+            setMessage('');
+          }}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Reassign Button Component
+const ReassignButton = ({ lead, users, onReassigned }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleReassign = async (agentId) => {
+    setLoading(true);
+    try {
+      await axios.patch(`${API}/leads/${lead.id}/assign?agent_id=${agentId}`);
+      onReassigned();
+      setShowDropdown(false);
+    } catch (error) {
+      alert(`Error al reasignar: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const agents = users.filter(u => u.role === 'AGENT' && u.is_active && u.id !== lead.assigned_agent_id);
+
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setShowDropdown(!showDropdown)}
+        disabled={loading}
+      >
+        Reasignar
+      </Button>
+      {showDropdown && (
+        <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+          <div className="py-1">
+            {agents.map(agent => (
+              <button
+                key={agent.id}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => handleReassign(agent.id)}
+              >
+                {agent.name}
+              </button>
+            ))}
+            <button
+              className="block w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              onClick={() => setShowDropdown(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Assign Button Component
+const AssignButton = ({ lead, users, onAssigned }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleAssign = async (agentId) => {
+    setLoading(true);
+    try {
+      await axios.patch(`${API}/leads/${lead.id}/assign?agent_id=${agentId}`);
+      onAssigned();
+      setShowDropdown(false);
+    } catch (error) {
+      alert(`Error al asignar: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const agents = users.filter(u => u.role === 'AGENT' && u.is_active);
+
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        onClick={() => setShowDropdown(!showDropdown)}
+        disabled={loading}
+        className="bg-green-600 hover:bg-green-700 text-white"
+      >
+        Asignar
+      </Button>
+      {showDropdown && (
+        <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+          <div className="py-1">
+            {agents.map(agent => (
+              <button
+                key={agent.id}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => handleAssign(agent.id)}
+              >
+                {agent.name}
+              </button>
+            ))}
+            <button
+              className="block w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              onClick={() => setShowDropdown(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Chat Interface Component
 const ChatInterface = ({ lead, user, onMessageSent }) => {
   const [messages, setMessages] = useState([]);
