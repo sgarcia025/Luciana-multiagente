@@ -641,6 +641,329 @@ const Dashboard = () => {
   );
 };
 
+// Chat Interface Component
+const ChatInterface = ({ lead, user, onMessageSent }) => {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+
+  useEffect(() => {
+    if (lead) {
+      fetchMessages();
+    }
+  }, [lead]);
+
+  const fetchMessages = async () => {
+    try {
+      setLoadingMessages(true);
+      const response = await axios.get(`${API}/conversations/${lead.id}/messages`);
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || loading) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API}/conversations/${lead.id}/messages`, {
+        text: newMessage,
+        type: 'text'
+      });
+      
+      setMessages([...messages, response.data]);
+      setNewMessage('');
+      onMessageSent();
+    } catch (error) {
+      alert(`Error al enviar mensaje: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <CardHeader className="border-b">
+        <div className="flex items-center space-x-3">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className="bg-green-100 text-green-700">
+              {lead.customer.name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <CardTitle className="text-lg">{lead.customer.name}</CardTitle>
+            <p className="text-sm text-gray-600">{lead.customer.phone}</p>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="flex flex-col h-[440px]">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto space-y-3 mb-4 bg-gray-50 p-4 rounded-lg">
+          {loadingMessages ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          ) : messages.length > 0 ? (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.direction === 'out' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    message.direction === 'out'
+                      ? 'bg-blue-600 text-white chat-bubble-out'
+                      : 'bg-white text-gray-800 border chat-bubble-in'
+                  }`}
+                >
+                  <p className="text-sm">{message.text}</p>
+                  <p className={`text-xs mt-1 ${
+                    message.direction === 'out' ? 'text-blue-100' : 'text-gray-500'
+                  }`}>
+                    {new Date(message.created_at).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <p>No hay mensajes aún</p>
+              <p className="text-sm">Envía tu primer mensaje por WhatsApp</p>
+            </div>
+          )}
+        </div>
+
+        {/* Message Input */}
+        <form onSubmit={sendMessage} className="flex space-x-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Escribe tu mensaje..."
+            disabled={loading}
+            className="flex-1"
+          />
+          <Button 
+            type="submit" 
+            disabled={loading || !newMessage.trim()}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              'Enviar'
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </>
+  );
+};
+
+// User Management Component  
+const UserManagement = ({ user, users, onUserCreated }) => {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'AGENT'
+  });
+  const [creating, setCreating] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setMessage('');
+
+    try {
+      await axios.post(`${API}/auth/register`, newUser);
+      setMessage('Usuario creado exitosamente');
+      setNewUser({ name: '', email: '', password: '', role: 'AGENT' });
+      setShowCreateForm(false);
+      onUserCreated();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'Error al crear usuario');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const getRoleOptions = () => {
+    if (user.role === 'SUPERUSER') {
+      return [
+        { value: 'SUPERUSER', label: 'Super Usuario' },
+        { value: 'ADMIN', label: 'Administrador' },
+        { value: 'AGENT', label: 'Agente' }
+      ];
+    } else {
+      return [
+        { value: 'ADMIN', label: 'Administrador' },
+        { value: 'AGENT', label: 'Agente' }
+      ];
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Usuarios ({users.length})</CardTitle>
+            <Button 
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Crear Usuario
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {showCreateForm && (
+            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+              <h3 className="text-lg font-medium mb-4">Crear Nuevo Usuario</h3>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Nombre Completo</label>
+                    <Input
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      placeholder="Ej: María González"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <Input
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      placeholder="maria@empresa.com"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Contraseña</label>
+                    <Input
+                      type="password"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      placeholder="••••••••"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Rol</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                    >
+                      {getRoleOptions().map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {message && (
+                  <Alert className={message.includes('Error') ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+                    <AlertDescription className={message.includes('Error') ? 'text-red-700' : 'text-green-700'}>
+                      {message}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex space-x-3">
+                  <Button 
+                    type="submit" 
+                    disabled={creating}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {creating ? 'Creando...' : 'Crear Usuario'}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setMessage('');
+                      setNewUser({ name: '', email: '', password: '', role: 'AGENT' });
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {users.map((u) => {
+              const assignedLeadsCount = users.length > 0 ? 
+                leads.filter(lead => lead.assigned_agent_id === u.id).length : 0;
+              
+              return (
+                <div key={u.id} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarFallback className="bg-blue-100 text-blue-700">
+                          {u.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{u.name}</h3>
+                        <p className="text-sm text-gray-600">{u.email}</p>
+                        {u.role === 'AGENT' && (
+                          <p className="text-xs text-gray-500">
+                            {assignedLeadsCount} leads asignados
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getRoleColor(u.role)}>
+                        {u.role}
+                      </Badge>
+                      <Badge variant={u.is_active ? "default" : "secondary"}>
+                        {u.is_active ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {users.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                <p>No hay usuarios disponibles</p>
+                <p className="text-sm">Crea tu primer usuario para comenzar</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // WhatsApp Settings Component
 const WhatsAppSettings = ({ user }) => {
   const [config, setConfig] = useState({
