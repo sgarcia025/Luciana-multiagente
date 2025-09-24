@@ -540,48 +540,87 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
 
+          {/* Chat Tab (Agent only) */}
+          {user.role === 'AGENT' && (
+            <TabsContent value="chat" data-testid="chat-tab">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+                {/* Chat List */}
+                <Card className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle>Conversaciones Activas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                      {leads.filter(lead => lead.assigned_agent_id === user.id && lead.status === 'accepted').map((lead) => (
+                        <div
+                          key={lead.id}
+                          onClick={() => setSelectedLead(lead)}
+                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                            selectedLead?.id === lead.id ? 'bg-blue-50 border-blue-200' : ''
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-green-100 text-green-700">
+                                {lead.customer.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{lead.customer.name}</p>
+                              <p className="text-xs text-gray-500">{lead.customer.phone}</p>
+                              <p className="text-xs text-gray-400 mt-1">{lead.source}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <Badge className="text-xs bg-green-100 text-green-800">
+                                Activo
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {leads.filter(lead => lead.assigned_agent_id === user.id && lead.status === 'accepted').length === 0 && (
+                        <div className="p-6 text-center text-gray-500">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                          <p>No hay conversaciones activas</p>
+                          <p className="text-sm">Acepta asignaciones para comenzar a chatear</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Chat Interface */}
+                <Card className="lg:col-span-2">
+                  {selectedLead ? (
+                    <ChatInterface 
+                      lead={selectedLead} 
+                      user={user} 
+                      onMessageSent={() => {
+                        // Refresh data or handle real-time updates
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-gray-500">
+                        <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium">Selecciona una conversación</h3>
+                        <p>Elige un lead de la lista para comenzar a chatear por WhatsApp</p>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            </TabsContent>
+          )}
+
           {/* Users Tab (Admin/Superuser only) */}
           {(user.role === 'ADMIN' || user.role === 'SUPERUSER') && (
             <TabsContent value="users" data-testid="users-tab">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Usuarios ({users.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {users.map((u) => (
-                      <div key={u.id} className="border rounded-lg p-4 bg-white">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Avatar>
-                              <AvatarFallback className="bg-blue-100 text-blue-700">
-                                {u.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-medium">{u.name}</h3>
-                              <p className="text-sm text-gray-600">{u.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={getRoleColor(u.role)}>
-                              {u.role}
-                            </Badge>
-                            <Badge variant={u.is_active ? "default" : "secondary"}>
-                              {u.is_active ? "Activo" : "Inactivo"}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {users.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        No hay usuarios disponibles
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <UserManagement 
+                user={user} 
+                users={users} 
+                onUserCreated={fetchData}
+              />
             </TabsContent>
           )}
 
