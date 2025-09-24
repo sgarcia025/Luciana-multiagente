@@ -1,4 +1,4 @@
-# WhatsApp Multi-Agent Router CRM - Luciana AI Technology
+# Luciana AI - Multi-Agent Router Platform
 
 Plataforma SaaS multi-tenant para enrutamiento inteligente de leads de WhatsApp con asignación automática a agentes.
 
