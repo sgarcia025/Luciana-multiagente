@@ -394,16 +394,24 @@ async def get_tenants(
 @api_router.post("/leads", response_model=Dict[str, Any])
 async def create_lead(
     lead_data: LeadCreate,
-    x_tenant_id: Annotated[str, Header()] = None
+    x_tenant_id: Annotated[str, Header()] = None,
+    current_user: User = Depends(get_current_user) if True else None
 ):
-    if not x_tenant_id:
+    # Allow both external API calls (with X-Tenant-Id) and authenticated calls
+    if x_tenant_id:
+        # External API call (from Luciana AI)
+        tenant_id = x_tenant_id
+    elif current_user and (current_user.role in [UserRole.ADMIN, UserRole.SUPERUSER]):
+        # Authenticated call (manual creation)
+        tenant_id = current_user.tenant_id if current_user.role == UserRole.ADMIN else None
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="X-Tenant-Id header is required"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="X-Tenant-Id header required or admin authentication needed"
         )
     
     # Check if tenant exists
-    tenant = await db.tenants.find_one({"_id": x_tenant_id})
+    tenant = await db.tenants.find_one({"_id": tenant_id})
     if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -412,20 +420,133 @@ async def create_lead(
     
     # Create lead
     lead_dict = lead_data.dict()
-    lead_dict['tenant_id'] = x_tenant_id
+    lead_dict['tenant_id'] = tenant_id
     lead = Lead(**lead_dict)
     lead_dict = prepare_for_mongo(lead.dict())
     
     await db.leads.insert_one(lead_dict)
     
-    # Try to assign lead to an agent
-    assignment_result = await assign_lead_to_agent(lead.id, x_tenant_id)
+    # Try to assign lead to an agent (automatic)
+    assignment_result = await assign_lead_to_agent(lead.id, tenant_id)
     
     return {
         "status": "queued",
         "router_lead_id": lead.id,
         "assignment_state": assignment_result.get("status", "pending")
     }
+
+@api_router.post("/leads/manual", response_model=Dict[str, Any])
+async def create_lead_manual(
+    lead_data: LeadCreate,
+    assigned_agent_id: Optional[str] = None,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.SUPERUSER]))
+):
+    """Create lead manually with optional specific agent assignment"""
+    
+    tenant_id = current_user.tenant_id if current_user.role == UserRole.ADMIN else None
+    
+    # Create lead
+    lead_dict = lead_data.dict()
+    lead_dict['tenant_id'] = tenant_id
+    lead = Lead(**lead_dict)
+    
+    if assigned_agent_id:
+        # Verify agent exists and belongs to tenant
+        agent = await db.users.find_one({
+            "_id": assigned_agent_id,
+            "tenant_id": tenant_id,
+            "role": UserRole.AGENT,
+            "is_active": True
+        })
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Agent not found or inactive"
+            )
+        
+        lead.assigned_agent_id = assigned_agent_id
+        lead.status = LeadStatus.ASSIGNED
+    
+    lead_dict = prepare_for_mongo(lead.dict())
+    await db.leads.insert_one(lead_dict)
+    
+    # Create assignment if agent specified
+    if assigned_agent_id:
+        assignment = Assignment(
+            tenant_id=tenant_id,
+            lead_id=lead.id,
+            agent_id=assigned_agent_id,
+            status=AssignmentStatus.PENDING
+        )
+        assignment_dict = prepare_for_mongo(assignment.dict())
+        await db.assignments.insert_one(assignment_dict)
+        
+        return {
+            "status": "created",
+            "lead_id": lead.id,
+            "assignment_state": "assigned_to_specific_agent",
+            "agent_id": assigned_agent_id
+        }
+    else:
+        # Auto-assign using round-robin
+        assignment_result = await assign_lead_to_agent(lead.id, tenant_id)
+        return {
+            "status": "created",
+            "lead_id": lead.id,
+            "assignment_state": assignment_result.get("status", "pending")
+        }
+
+@api_router.patch("/leads/{lead_id}/assign")
+async def reassign_lead(
+    lead_id: str,
+    agent_id: str,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.SUPERUSER]))
+):
+    """Manually reassign lead to specific agent"""
+    
+    # Find lead
+    lead = await db.leads.find_one({"_id": lead_id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Verify agent
+    agent = await db.users.find_one({
+        "_id": agent_id,
+        "tenant_id": current_user.tenant_id if current_user.role == UserRole.ADMIN else lead["tenant_id"],
+        "role": UserRole.AGENT,
+        "is_active": True
+    })
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    # Update lead
+    await db.leads.update_one(
+        {"_id": lead_id},
+        {
+            "$set": {
+                "assigned_agent_id": agent_id,
+                "status": LeadStatus.ASSIGNED
+            }
+        }
+    )
+    
+    # Cancel existing assignments
+    await db.assignments.update_many(
+        {"lead_id": lead_id, "status": AssignmentStatus.PENDING},
+        {"$set": {"status": AssignmentStatus.REASSIGNED}}
+    )
+    
+    # Create new assignment
+    assignment = Assignment(
+        tenant_id=lead["tenant_id"],
+        lead_id=lead_id,
+        agent_id=agent_id,
+        status=AssignmentStatus.PENDING
+    )
+    assignment_dict = prepare_for_mongo(assignment.dict())
+    await db.assignments.insert_one(assignment_dict)
+    
+    return {"message": "Lead reassigned successfully", "agent_id": agent_id}
 
 async def assign_lead_to_agent(lead_id: str, tenant_id: str):
     """Simple round-robin assignment logic"""
