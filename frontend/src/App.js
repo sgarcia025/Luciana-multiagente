@@ -377,9 +377,10 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="leads" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-400">
+          <TabsList className="grid w-full grid-cols-5 lg:w-500">
             <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="assignments">Asignaciones</TabsTrigger>
+            {user.role === 'AGENT' && <TabsTrigger value="chat">Chat</TabsTrigger>}
             {(user.role === 'ADMIN' || user.role === 'SUPERUSER') && (
               <TabsTrigger value="users">Usuarios</TabsTrigger>
             )}
