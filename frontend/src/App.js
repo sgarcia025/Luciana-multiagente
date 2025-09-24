@@ -619,6 +619,7 @@ const Dashboard = () => {
               <UserManagement 
                 user={user} 
                 users={users} 
+                leads={leads}
                 onUserCreated={fetchData}
               />
             </TabsContent>
