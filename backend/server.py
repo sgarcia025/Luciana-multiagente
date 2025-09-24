@@ -443,7 +443,18 @@ async def create_lead_manual(
 ):
     """Create lead manually with optional specific agent assignment"""
     
-    tenant_id = current_user.tenant_id if current_user.role == UserRole.ADMIN else None
+    # Get the correct tenant_id
+    if current_user.role == UserRole.ADMIN:
+        tenant_id = current_user.tenant_id
+    else:  # SUPERUSER
+        # For superuser, we need to get tenant_id from context or require it
+        # For now, let's assume superuser operations require a specific tenant
+        if not current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tenant ID required for this operation"
+            )
+        tenant_id = current_user.tenant_id
     
     # Create lead
     lead_dict = lead_data.dict()
