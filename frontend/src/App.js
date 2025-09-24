@@ -567,6 +567,238 @@ const Dashboard = () => {
   );
 };
 
+// WhatsApp Settings Component
+const WhatsAppSettings = ({ user }) => {
+  const [config, setConfig] = useState({
+    api_base: '',
+    api_key: '',
+    phone_number: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [message, setMessage] = useState('');
+
+  const handleConfigSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await axios.patch(`${API}/whatsapp/config`, config);
+      setMessage('Configuración guardada exitosamente');
+      
+      // Check status after saving
+      checkWhatsAppStatus();
+    } catch (error) {
+      setMessage(error.response?.data?.detail || 'Error al guardar la configuración');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkWhatsAppStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/whatsapp/status`);
+      setStatus(response.data);
+    } catch (error) {
+      console.error('Error checking WhatsApp status:', error);
+    }
+  };
+
+  const sendTestMessage = async () => {
+    const testPhone = prompt('Ingresa el número de teléfono para enviar mensaje de prueba (incluye código de país):');
+    if (!testPhone) return;
+
+    try {
+      const response = await axios.post(`${API}/whatsapp/send-message`, {
+        to_phone: testPhone,
+        message: '¡Hola! Este es un mensaje de prueba desde tu WhatsApp CRM de Luciana AI Technology. 🚀',
+        type: 'text'
+      });
+
+      if (response.data.success) {
+        alert('Mensaje de prueba enviado exitosamente!');
+      } else {
+        alert(`Error al enviar mensaje: ${response.data.error}`);
+      }
+    } catch (error) {
+      alert(`Error al enviar mensaje: ${error.response?.data?.detail || error.message}`);
+    }
+  };
+
+  if (user.role === 'AGENT') {
+    return (
+      <Alert>
+        <Settings className="h-4 w-4" />
+        <AlertDescription>
+          Solo los administradores pueden configurar la integración de WhatsApp.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Alert className="border-blue-200 bg-blue-50">
+        <Settings className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          Configura tu integración con UltraMSG para enviar y recibir mensajes de WhatsApp.
+          <br />
+          <strong>Nota:</strong> Necesitas una cuenta activa en UltraMSG y tu instancia configurada.
+        </AlertDescription>
+      </Alert>
+
+      <form onSubmit={handleConfigSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">API Base URL *</label>
+            <Input
+              data-testid="whatsapp-api-base"
+              placeholder="https://api.ultramsg.com/instance123456"
+              value={config.api_base}
+              onChange={(e) => setConfig({...config, api_base: e.target.value})}
+              required
+            />
+            <p className="text-xs text-gray-500">
+              URL base de tu instancia de UltraMSG
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">API Key *</label>
+            <Input
+              data-testid="whatsapp-api-key"
+              type="password"
+              placeholder="Tu token de UltraMSG"
+              value={config.api_key}
+              onChange={(e) => setConfig({...config, api_key: e.target.value})}
+              required
+            />
+            <p className="text-xs text-gray-500">
+              Token de acceso de UltraMSG
+            </p>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Número de WhatsApp *</label>
+          <Input
+            data-testid="whatsapp-phone-number"
+            placeholder="+34612345678"
+            value={config.phone_number}
+            onChange={(e) => setConfig({...config, phone_number: e.target.value})}
+            required
+          />
+          <p className="text-xs text-gray-500">
+            Número de WhatsApp conectado a la instancia (incluye código de país)
+          </p>
+        </div>
+
+        {message && (
+          <Alert className={message.includes('Error') ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}>
+            <AlertDescription className={message.includes('Error') ? 'text-red-700' : 'text-green-700'}>
+              {message}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex gap-3">
+          <Button 
+            data-testid="save-whatsapp-config"
+            type="submit" 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {loading ? 'Guardando...' : 'Guardar Configuración'}
+          </Button>
+          
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={checkWhatsAppStatus}
+          >
+            Verificar Estado
+          </Button>
+          
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={sendTestMessage}
+            disabled={!config.api_key}
+          >
+            Enviar Mensaje de Prueba
+          </Button>
+        </div>
+      </form>
+
+      {status && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Estado de WhatsApp</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Estado de la cuenta:</span>
+                <Badge className={status.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                  {status.success ? status.status || 'Conectado' : 'Error'}
+                </Badge>
+              </div>
+              
+              {status.phone && (
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Número:</span>
+                  <span>{status.phone}</span>
+                </div>
+              )}
+              
+              {status.instance && (
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Instancia:</span>
+                  <span className="font-mono text-sm">{status.instance}</span>
+                </div>
+              )}
+              
+              {!status.success && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-700">
+                    {status.error || 'Error al verificar el estado de WhatsApp'}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Configuración de Webhook</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Para recibir mensajes entrantes, configura esta URL en tu panel de UltraMSG:
+          </p>
+          <div className="flex items-center space-x-2">
+            <Input
+              readOnly
+              value={`${BACKEND_URL}/api/webhooks/whatsapp`}
+              className="font-mono text-sm bg-gray-50"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigator.clipboard.writeText(`${BACKEND_URL}/api/webhooks/whatsapp`)}
+            >
+              Copiar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
