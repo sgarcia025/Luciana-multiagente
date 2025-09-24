@@ -520,10 +520,13 @@ async def reassign_lead(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
+    # Get tenant_id for verification
+    tenant_id = current_user.tenant_id if current_user.role == UserRole.ADMIN else lead["tenant_id"]
+    
     # Verify agent
     agent = await db.users.find_one({
         "_id": agent_id,
-        "tenant_id": current_user.tenant_id if current_user.role == UserRole.ADMIN else lead["tenant_id"],
+        "tenant_id": tenant_id,
         "role": UserRole.AGENT,
         "is_active": True
     })
@@ -549,7 +552,7 @@ async def reassign_lead(
     
     # Create new assignment
     assignment = Assignment(
-        tenant_id=lead["tenant_id"],
+        tenant_id=tenant_id,
         lead_id=lead_id,
         agent_id=agent_id,
         status=AssignmentStatus.PENDING
