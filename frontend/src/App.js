@@ -390,86 +390,111 @@ const Dashboard = () => {
 
           {/* Leads Tab */}
           <TabsContent value="leads" data-testid="leads-tab">
-            <Card>
-              <CardHeader>
-                <CardTitle>Leads ({leads.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {leads.map((lead) => {
-                    const assignedAgent = users.find(u => u.id === lead.assigned_agent_id);
-                    return (
-                      <div key={lead.id} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2 flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="font-medium">{lead.customer.name}</h3>
-                              <Badge className={getStatusColor(lead.status)}>
-                                {lead.status}
-                              </Badge>
-                              <Badge variant="outline">{lead.priority}</Badge>
-                            </div>
-                            <div className="flex items-center space-x-4 text-sm text-gray-600">
-                              <div className="flex items-center space-x-1">
-                                <Phone className="h-4 w-4" />
-                                <span>{lead.customer.phone}</span>
+            <div className="space-y-6">
+              {(user.role === 'ADMIN' || user.role === 'SUPERUSER') && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Crear Lead Manual</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <CreateLeadForm users={users} onLeadCreated={fetchData} />
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Leads ({leads.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {leads.map((lead) => {
+                      const assignedAgent = users.find(u => u.id === lead.assigned_agent_id);
+                      return (
+                        <div key={lead.id} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center space-x-2">
+                                <h3 className="font-medium">{lead.customer.name}</h3>
+                                <Badge className={getStatusColor(lead.status)}>
+                                  {lead.status}
+                                </Badge>
+                                <Badge variant="outline">{lead.priority}</Badge>
                               </div>
-                              {lead.customer.email && (
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
                                 <div className="flex items-center space-x-1">
-                                  <Mail className="h-4 w-4" />
-                                  <span>{lead.customer.email}</span>
+                                  <Phone className="h-4 w-4" />
+                                  <span>{lead.customer.phone}</span>
+                                </div>
+                                {lead.customer.email && (
+                                  <div className="flex items-center space-x-1">
+                                    <Mail className="h-4 w-4" />
+                                    <span>{lead.customer.email}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                Fuente: {lead.source} | Etapa: {lead.journey_stage}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Creado: {new Date(lead.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            
+                            <div className="ml-4 text-right space-y-2">
+                              {lead.assigned_agent_id && assignedAgent ? (
+                                <div className="flex items-center space-x-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                                      {assignedAgent.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm font-medium text-blue-700">
+                                    {assignedAgent.name}
+                                  </span>
+                                  {(user.role === 'ADMIN' || user.role === 'SUPERUSER') && (
+                                    <ReassignButton lead={lead} users={users} onReassigned={fetchData} />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    Sin asignar
+                                  </Badge>
+                                  {(user.role === 'ADMIN' || user.role === 'SUPERUSER') && (
+                                    <AssignButton lead={lead} users={users} onAssigned={fetchData} />
+                                  )}
                                 </div>
                               )}
+                              
+                              {user.role === 'AGENT' && lead.assigned_agent_id === user.id && lead.status === 'accepted' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setSelectedLead(lead)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <MessageSquare className="h-4 w-4 mr-1" />
+                                  Chat
+                                </Button>
+                              )}
                             </div>
-                            <p className="text-sm text-gray-600">
-                              Fuente: {lead.source} | Etapa: {lead.journey_stage}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Creado: {new Date(lead.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                          
-                          <div className="ml-4 text-right space-y-2">
-                            {lead.assigned_agent_id && assignedAgent ? (
-                              <div className="flex items-center space-x-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                                    {assignedAgent.name.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium text-blue-700">
-                                  {assignedAgent.name}
-                                </span>
-                              </div>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">
-                                Sin asignar
-                              </Badge>
-                            )}
-                            
-                            {user.role === 'AGENT' && lead.assigned_agent_id === user.id && lead.status === 'accepted' && (
-                              <Button
-                                size="sm"
-                                onClick={() => setSelectedLead(lead)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <MessageSquare className="h-4 w-4 mr-1" />
-                                Chat
-                              </Button>
-                            )}
                           </div>
                         </div>
+                      );
+                    })}
+                    {leads.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                        <p>No hay leads disponibles</p>
+                        <p className="text-sm">Crea tu primer lead manual o espera leads de Luciana AI</p>
                       </div>
-                    );
-                  })}
-                  {leads.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      No hay leads disponibles
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Assignments Tab */}
