@@ -39,6 +39,9 @@ security = HTTPBearer()
 app = FastAPI(title="WhatsApp Multi-Agent Router CRM", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
+# Initialize WhatsApp service
+whatsapp_service = UltraMSGService(db)
+
 # Enums
 class UserRole(str, Enum):
     SUPERUSER = "SUPERUSER"
