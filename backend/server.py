@@ -636,8 +636,21 @@ async def get_assignments(
     if current_user.role == UserRole.AGENT:
         query["agent_id"] = current_user.id
     
+    logger.info(f"Assignment query for {current_user.email}: {query}")
+    
     assignments = await db.assignments.find(query).to_list(1000)
-    return [AssignmentResponse(**parse_from_mongo(assignment)) for assignment in assignments]
+    logger.info(f"Found {len(assignments)} assignments")
+    
+    parsed_assignments = []
+    for assignment in assignments:
+        try:
+            parsed = parse_from_mongo(assignment)
+            logger.info(f"Parsed assignment: {parsed.get('id', 'NO_ID')[:8]}... status={parsed.get('status')}")
+            parsed_assignments.append(AssignmentResponse(**parsed))
+        except Exception as e:
+            logger.error(f"Error parsing assignment {assignment.get('_id', 'NO_ID')}: {e}")
+    
+    return parsed_assignments
 
 @api_router.post("/assignments/{assignment_id}/accept")
 async def accept_assignment(
