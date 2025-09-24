@@ -70,7 +70,7 @@ AGENT 2:   agent2@tenant1.com / agent123
 
 1. **Crear cuenta en UltraMSG**
 2. **Configurar instancia WhatsApp**
-3. **En el CRM**:
+3. **En Luciana AI**:
    - Login como ADMIN
    - Ir a "Configuración"
    - Llenar datos de UltraMSG:
