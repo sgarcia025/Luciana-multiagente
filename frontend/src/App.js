@@ -788,6 +788,8 @@ const UserManagement = ({ user, users, leads, onUserCreated }) => {
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
+
+  const handleCreateUser = async (e) => {
     e.preventDefault();
     setCreating(true);
     setMessage('');
