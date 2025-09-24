@@ -254,8 +254,12 @@ def prepare_for_mongo(data):
     return data
 
 def parse_from_mongo(item):
-    """Convert ISO strings back to datetime objects"""
+    """Convert MongoDB document to Pydantic-compatible format"""
     if isinstance(item, dict):
+        # Convert MongoDB _id to id
+        if '_id' in item:
+            item['id'] = item.pop('_id')
+        
         for key, value in item.items():
             if isinstance(value, str) and key.endswith('_at'):
                 try:
