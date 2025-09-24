@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
 import { Button } from './components/ui/button';
@@ -92,6 +92,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,7 +101,10 @@ const LoginPage = () => {
 
     const result = await login(email, password);
     
-    if (!result.success) {
+    if (result.success) {
+      // Redirect to dashboard after successful login
+      navigate('/');
+    } else {
       setError(result.error);
     }
     
