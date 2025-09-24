@@ -125,7 +125,7 @@ const LoginPage = () => {
 
         <Card className="backdrop-blur-lg bg-white/90 border-0 shadow-2xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center font-semibold">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-2xl text-center font-semibold">Iniciar Sesión en Luciana AI</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
