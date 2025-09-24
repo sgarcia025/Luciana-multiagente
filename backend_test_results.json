@@ -1,0 +1,122 @@
+{
+  "timestamp": "2025-09-24T03:58:42.796447",
+  "total_tests": 19,
+  "passed_tests": 19,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "name": "Login SUPERUSER",
+      "success": true,
+      "details": "User: System Administrator",
+      "timestamp": "2025-09-24T03:58:41.546823"
+    },
+    {
+      "name": "Login ADMIN",
+      "success": true,
+      "details": "User: Luciana Admin",
+      "timestamp": "2025-09-24T03:58:41.810420"
+    },
+    {
+      "name": "Login AGENT",
+      "success": true,
+      "details": "User: Agent Rodriguez",
+      "timestamp": "2025-09-24T03:58:42.077383"
+    },
+    {
+      "name": "Auth/me SUPERUSER",
+      "success": true,
+      "details": "Role verified: SUPERUSER",
+      "timestamp": "2025-09-24T03:58:42.113556"
+    },
+    {
+      "name": "Auth/me ADMIN",
+      "success": true,
+      "details": "Role verified: ADMIN",
+      "timestamp": "2025-09-24T03:58:42.152764"
+    },
+    {
+      "name": "Auth/me AGENT",
+      "success": true,
+      "details": "Role verified: AGENT",
+      "timestamp": "2025-09-24T03:58:42.230149"
+    },
+    {
+      "name": "Lead Creation",
+      "success": true,
+      "details": "Lead ID: 225328f0-67ad-4f03-a3e2-f8066ef4630e",
+      "timestamp": "2025-09-24T03:58:42.268268"
+    },
+    {
+      "name": "Get Leads SUPERUSER",
+      "success": true,
+      "details": "Found 5 leads",
+      "timestamp": "2025-09-24T03:58:42.307249"
+    },
+    {
+      "name": "Get Leads ADMIN",
+      "success": true,
+      "details": "Found 5 leads",
+      "timestamp": "2025-09-24T03:58:42.395826"
+    },
+    {
+      "name": "Get Leads AGENT",
+      "success": true,
+      "details": "Found 0 leads",
+      "timestamp": "2025-09-24T03:58:42.460162"
+    },
+    {
+      "name": "Get Assignments SUPERUSER",
+      "success": true,
+      "details": "Found 2 assignments",
+      "timestamp": "2025-09-24T03:58:42.499558"
+    },
+    {
+      "name": "Get Assignments ADMIN",
+      "success": true,
+      "details": "Found 2 assignments",
+      "timestamp": "2025-09-24T03:58:42.535504"
+    },
+    {
+      "name": "Get Assignments AGENT",
+      "success": true,
+      "details": "Found 0 assignments",
+      "timestamp": "2025-09-24T03:58:42.573011"
+    },
+    {
+      "name": "Get Users SUPERUSER",
+      "success": true,
+      "details": "Found 4 users",
+      "timestamp": "2025-09-24T03:58:42.610194"
+    },
+    {
+      "name": "Get Users ADMIN",
+      "success": true,
+      "details": "Found 3 users",
+      "timestamp": "2025-09-24T03:58:42.646441"
+    },
+    {
+      "name": "Get Users AGENT (should fail)",
+      "success": true,
+      "details": "Correctly denied access",
+      "timestamp": "2025-09-24T03:58:42.680228"
+    },
+    {
+      "name": "Assignment Actions",
+      "success": true,
+      "details": "No pending assignments to test (expected)",
+      "timestamp": "2025-09-24T03:58:42.720148"
+    },
+    {
+      "name": "Invalid Login",
+      "success": true,
+      "details": "Correctly rejected invalid credentials",
+      "timestamp": "2025-09-24T03:58:42.756936"
+    },
+    {
+      "name": "Lead without Tenant-ID",
+      "success": true,
+      "details": "Correctly rejected request without X-Tenant-Id",
+      "timestamp": "2025-09-24T03:58:42.795522"
+    }
+  ]
+}
