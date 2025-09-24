@@ -119,7 +119,7 @@ const LoginPage = () => {
           <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-4">
             <MessageSquare className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp CRM</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Luciana AI</h1>
           <p className="text-gray-600 mt-2">Multi-Agent Router Platform</p>
         </div>
 
